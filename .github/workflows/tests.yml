@@ -24,6 +24,49 @@ jobs:
     secrets:
       SONAR_TOKEN: ${{ secrets.ANSIBLE_COLLECTIONS_ORG_SONAR_TOKEN_CICD_BOT }}
 
+  codecov:
+    name: "Code Coverage"
+    runs-on: ubuntu-latest
+    if: >-
+      !github.event.pull_request ||
+      contains(github.event.pull_request.labels.*.name, 'safe to test')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Checkout PR Branch Code
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr
+          git checkout pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install ansible-core pytest pytest-cov pytest-ansible-units pytest-forked pytest-xdist
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Unit Tests with Coverage
+        run: pytest tests/unit -v --cov-report xml --cov=./ -o 'addopts='
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   changelog:
     uses: ansible/ansible-content-actions/.github/workflows/changelog.yaml@main
     if: github.event_name == 'pull_request_target'
@@ -66,6 +109,7 @@ jobs:
       - ansible-lint
       - integration
       - sonar
+      - codecov
       - report-status
     runs-on: ubuntu-latest
     steps:
@@ -78,5 +122,6 @@ jobs:
           '${{ needs.unit-galaxy.result }}',
           '${{ needs.ansible-lint.result }}',
           '${{ needs.sonar.result }}',
+          '${{ needs.codecov.result }}',
           '${{ needs.report-status.result }}'
           ])"
