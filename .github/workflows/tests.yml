@@ -65,7 +65,7 @@ jobs:
           files: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ vars.CODECOV_TOKEN }}
 
   changelog:
     uses: ansible/ansible-content-actions/.github/workflows/changelog.yaml@main
