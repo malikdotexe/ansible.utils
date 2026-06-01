@@ -33,6 +33,6 @@ jobs:
         uses: codecov/codecov-action@v6
         with:
           files: ./coverage.xml
-          flags: unittests
+          flags: unit-tests
           fail_ci_if_error: true
-          token: ${{ vars.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
